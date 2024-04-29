@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using nc.productmanager.Data;
 using nc.productmanager.Data.Models;
 using nc.productmanager.Provider.Interfaces;
