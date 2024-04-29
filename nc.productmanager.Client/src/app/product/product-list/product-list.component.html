@@ -4,6 +4,7 @@
       <mat-label>Search product...</mat-label>
       <input matInput (keyup)="applyFilter($event)" #input>
     </mat-form-field>
+    <button mat-stroked-button class="mb-3" (click)="openCreateProductCategoryDialog()">Create Category</button>
     <button mat-stroked-button class="mb-3" (click)="openCreateProductDialog()">Create Product</button>
   </div>
 

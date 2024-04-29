@@ -6,6 +6,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ProductListComponent } from './product-list/product-list.component';
 import { ProductCreateComponent } from './product-create/product-create.component';
 import { ProductDeleteComponent } from './product-delete/product-delete.component';
+import { ProductCategoryCreateComponent } from './product-category-create/product-category-create.component';
 
 
 
@@ -13,7 +14,8 @@ import { ProductDeleteComponent } from './product-delete/product-delete.componen
   declarations: [
     ProductListComponent,
     ProductCreateComponent,
-    ProductDeleteComponent
+    ProductDeleteComponent,
+    ProductCategoryCreateComponent
   ],
   imports: [
     CommonModule,

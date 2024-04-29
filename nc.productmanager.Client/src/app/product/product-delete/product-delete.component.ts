@@ -24,6 +24,10 @@ export class ProductDeleteComponent {
     }
   }
 
+  onCancel(): void {
+    this.dialogRef.close();
+  }
+
   private onDeleteProduct(): void {
     this.dialogRef.close();
   }

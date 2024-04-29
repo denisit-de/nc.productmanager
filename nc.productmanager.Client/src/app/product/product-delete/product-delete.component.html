@@ -4,7 +4,7 @@
     <p>Do you want delete "{{ data.name }}"?</p>
   </div>
   <div class="mat-dialog-actions">
-    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-button (click)="onCancel()">Cancel</button>
     <button mat-button (click)="deleteProduct()">Delete</button>
   </div>
 </div>

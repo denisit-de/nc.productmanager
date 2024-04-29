@@ -7,6 +7,7 @@ import { ProductService } from '../product.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ProductCreateComponent } from '../product-create/product-create.component';
 import { ProductDeleteComponent } from '../product-delete/product-delete.component';
+import { ProductCategoryCreateComponent } from '../product-category-create/product-category-create.component';
 
 @Component({
   selector: 'app-product-list',
@@ -44,6 +45,15 @@ export class ProductListComponent implements OnInit {
     if (this.dataSource.paginator) {
       this.dataSource.paginator.firstPage();
     }
+  }
+
+  openCreateProductCategoryDialog(): void {
+    const dialogRef = this.dialog.open(ProductCategoryCreateComponent);
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.initProducts();
+      }
+    });
   }
 
   openCreateProductDialog(): void {
