@@ -41,5 +41,8 @@
     <ProjectReference Include="..\nc.productmanager.Dto\nc.productmanager.Dto.csproj">
       <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
     </ProjectReference>
+    <ProjectReference Include="..\nc.productmanager.Provider\nc.productmanager.Provider.csproj">
+      <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
+    </ProjectReference>
   </ItemGroup>
 </Project>

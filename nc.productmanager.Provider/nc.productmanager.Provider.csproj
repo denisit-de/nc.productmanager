@@ -6,4 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Interfaces\" />
+    <None Remove="Products\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Interfaces\" />
+    <Folder Include="Products\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\nc.productmanager.Data\nc.productmanager.Data.csproj" />
+  </ItemGroup>
 </Project>

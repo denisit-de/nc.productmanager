@@ -1,9 +1,8 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using nc.productmanager.Data;
 using nc.productmanager.Data.Models;
 using nc.productmanager.Dto.Product;
+using nc.productmanager.Provider.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -14,16 +13,16 @@ namespace nc.productmanager.Api.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly IProductsProvider _productsProvider;
         private readonly IMapper _mapper;
         private readonly ILogger<ProductsController> _logger;
 
         public ProductsController(
-            AppDbContext db,
+            IProductsProvider productsProvider,
             IMapper mapper,
             ILogger<ProductsController> logger)
         {
-            _db = db;
+            _productsProvider = productsProvider;
             _mapper = mapper;
             _logger = logger;
         }
@@ -38,7 +37,7 @@ namespace nc.productmanager.Api.Controllers
             try
             {
                 _logger.LogInformation("Fetching all product categories");
-                var productCategories = await _db.ProductCategories.ToListAsync();
+                var productCategories = await _productsProvider.GetAllCategoriesAsync();
                 var getProductCategoriesDto = _mapper.Map<IEnumerable<GetProductCategoryDto>>(productCategories);
                 return Ok(getProductCategoriesDto);
             }
@@ -59,7 +58,7 @@ namespace nc.productmanager.Api.Controllers
             try
             {
                 _logger.LogInformation("Fetching product category with ID: {Id}", id);
-                var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
+                var productCategory = await _productsProvider.GetCategoryByIdAsync(id);
                 if (productCategory == null)
                 {
                     _logger.LogWarning("Product category with ID: {Id} not found", id);
@@ -85,14 +84,10 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                var productCategory = _mapper.Map<ProductCategory>(categoryDto);
-                _db.Add(productCategory);
-                await _db.SaveChangesAsync();
-
-                var getProductCategoryDto = _mapper.Map<GetProductCategoryDto>(productCategory);
-                _logger.LogInformation("Created a new product category with ID {CategoryId}", productCategory.Id);
-
-                return Ok(getProductCategoryDto);
+                var category = _mapper.Map<ProductCategory>(categoryDto);
+                var createdCategory = await _productsProvider.CreateCategoryAsync(category);
+                var getCategoryDto = _mapper.Map<GetProductCategoryDto>(createdCategory);
+                return Ok(getCategoryDto);
             }
             catch (Exception ex)
             {
@@ -110,21 +105,17 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
-                if (productCategory == null)
+                var categoryToUpdate = await _productsProvider.GetCategoryByIdAsync(id);
+                if (categoryToUpdate == null)
                 {
                     _logger.LogWarning("Product category with ID: {Id} not found", id);
                     return NotFound();
                 }
 
-                _mapper.Map(categoryDto, productCategory);
-                _db.ProductCategories.Update(productCategory);
-                await _db.SaveChangesAsync();
-
-                var getProductCategory = _mapper.Map<GetProductCategoryDto>(productCategory);
-                _logger.LogInformation("Updated product category with ID {Id}", id);
-
-                return Ok(getProductCategory);
+                _mapper.Map(categoryDto, categoryToUpdate);
+                await _productsProvider.UpdateCategoryAsync(categoryToUpdate);
+                var updatedCategoryDto = _mapper.Map<GetProductCategoryDto>(categoryToUpdate);
+                return Ok(updatedCategoryDto);
             }
             catch (Exception ex)
             {
@@ -142,18 +133,14 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
-                if (productCategory == null)
+                var categoryToDelete = await _productsProvider.GetCategoryByIdAsync(id);
+                if (categoryToDelete == null)
                 {
                     _logger.LogWarning("Product category with ID: {Id} not found", id);
                     return NotFound();
                 }
 
-                _db.ProductCategories.Remove(productCategory);
-                await _db.SaveChangesAsync();
-
-                _logger.LogInformation("Deleted product category with ID {Id}", id);
-
+                await _productsProvider.DeleteCategoryAsync(categoryToDelete);
                 return Ok();
             }
             catch (Exception ex)
@@ -172,12 +159,9 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Fetching all products");
-                var products = await _db.Products
-                                        .Include(p => p.ProductCategory)
-                                        .ToListAsync();
-                var getProductsDto = _mapper.Map<IEnumerable<GetProductDto>>(products);
-                return Ok(getProductsDto);
+                var products = await _productsProvider.GetAllProductsAsync();
+                var productsDto = _mapper.Map<IEnumerable<GetProductDto>>(products);
+                return Ok(productsDto);
             }
             catch (Exception ex)
             {
@@ -195,19 +179,14 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Fetching product with ID: {Id}", id);
-                var product = await _db.Products
-                                       .Include(p => p.ProductCategory)
-                                       .FirstOrDefaultAsync(p => p.Id == id);
-
+                var product = await _productsProvider.GetProductByIdAsync(id);
                 if (product == null)
                 {
                     _logger.LogWarning("Product with ID: {Id} not found", id);
                     return NotFound();
                 }
-
-                var getProductDto = _mapper.Map<GetProductDto>(product);
-                return Ok(getProductDto);
+                var productDto = _mapper.Map<GetProductDto>(product);
+                return Ok(productDto);
             }
             catch (Exception ex)
             {
@@ -226,12 +205,8 @@ namespace nc.productmanager.Api.Controllers
             try
             {
                 var product = _mapper.Map<Product>(productDto);
-                _db.Add(product);
-                await _db.SaveChangesAsync();
-
-                var getProductDto = _mapper.Map<GetProductDto>(product);
-                _logger.LogInformation("Created a new product with ID {ProductId}", product.Id);
-
+                var createdProduct = await _productsProvider.CreateProductAsync(product);
+                var getProductDto = _mapper.Map<GetProductDto>(createdProduct);
                 return Ok(getProductDto);
             }
             catch (Exception ex)
@@ -250,22 +225,17 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
-
-                if (product == null)
+                var productToUpdate = await _productsProvider.GetProductByIdAsync(id);
+                if (productToUpdate == null)
                 {
                     _logger.LogWarning("Product with ID: {Id} not found", id);
                     return NotFound();
                 }
 
-                _mapper.Map(productDto, product);
-                _db.Products.Update(product);
-                await _db.SaveChangesAsync();
-
-                var getProductDto = _mapper.Map<GetProductDto>(product);
-                _logger.LogInformation("Updated product with ID {Id}", id);
-
-                return Ok(getProductDto);
+                _mapper.Map(productDto, productToUpdate);
+                await _productsProvider.UpdateProductAsync(productToUpdate);
+                var updatedProductDto = _mapper.Map<GetProductDto>(productToUpdate);
+                return Ok(updatedProductDto);
             }
             catch (Exception ex)
             {
@@ -283,19 +253,14 @@ namespace nc.productmanager.Api.Controllers
         {
             try
             {
-                var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
-
-                if (product == null)
+                var productToDelete = await _productsProvider.GetProductByIdAsync(id);
+                if (productToDelete == null)
                 {
                     _logger.LogWarning("Product with ID: {Id} not found", id);
                     return NotFound();
                 }
 
-                _db.Products.Remove(product);
-                await _db.SaveChangesAsync();
-
-                _logger.LogInformation("Deleted product with ID {Id}", id);
-
+                await _productsProvider.DeleteProductAsync(productToDelete);
                 return Ok();
             }
             catch (Exception ex)

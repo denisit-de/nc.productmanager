@@ -1,6 +1,8 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
 using nc.productmanager.Data;
+using nc.productmanager.Provider.Interfaces;
+using nc.productmanager.Provider.Products;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseSqlite(builder.Configuration.GetConnectionString("SqliteConnection"));
 });
+
+builder.Services.AddScoped<IProductsProvider, ProductsProvider>();
 
 var app = builder.Build();
 
