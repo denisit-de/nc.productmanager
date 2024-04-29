@@ -16,13 +16,16 @@ namespace nc.productmanager.Api.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IMapper _mapper;
+        private readonly ILogger<ProductsController> _logger;
 
         public ProductsController(
             AppDbContext db,
-            IMapper mapper)
+            IMapper mapper,
+            ILogger<ProductsController> logger)
         {
             _db = db;
             _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpGet("categories")]
@@ -32,9 +35,18 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Categories not found")]
         public async Task<IActionResult> GetProductCategories()
         {
-            var productCategories = await _db.ProductCategories.ToListAsync();
-            var getProductCategoriesDto = _mapper.Map<IEnumerable<GetProductCategoryDto>>(productCategories);
-            return Ok(getProductCategoriesDto);
+            try
+            {
+                _logger.LogInformation("Fetching all product categories");
+                var productCategories = await _db.ProductCategories.ToListAsync();
+                var getProductCategoriesDto = _mapper.Map<IEnumerable<GetProductCategoryDto>>(productCategories);
+                return Ok(getProductCategoriesDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch product categories");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("categories/{id}")]
@@ -44,9 +56,24 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Category not found")]
         public async Task<IActionResult> GetProductCategory(int id)
         {
-            var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
-            var getProductCategoryDto = _mapper.Map<GetProductCategoryDto>(productCategory);
-            return Ok(getProductCategoryDto);
+            try
+            {
+                _logger.LogInformation("Fetching product category with ID: {Id}", id);
+                var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
+                if (productCategory == null)
+                {
+                    _logger.LogWarning("Product category with ID: {Id} not found", id);
+                    return NotFound();
+                }
+
+                var getProductCategoryDto = _mapper.Map<GetProductCategoryDto>(productCategory);
+                return Ok(getProductCategoryDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch product category with ID: {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpPost("categories")]
@@ -56,13 +83,22 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Category not found")]
         public async Task<IActionResult> CreateProductCategory(ProductCategoryDto categoryDto)
         {
-            var productCategory = _mapper.Map<ProductCategory>(categoryDto);
+            try
+            {
+                var productCategory = _mapper.Map<ProductCategory>(categoryDto);
+                _db.Add(productCategory);
+                await _db.SaveChangesAsync();
 
-            _db.Add(productCategory);
-            await _db.SaveChangesAsync();
+                var getProductCategoryDto = _mapper.Map<GetProductCategoryDto>(productCategory);
+                _logger.LogInformation("Created a new product category with ID {CategoryId}", productCategory.Id);
 
-            var getProductCategoryDto = _mapper.Map<GetProductCategoryDto>(productCategory);
-            return Ok(getProductCategoryDto);
+                return Ok(getProductCategoryDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create product category");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpPut("categories/{id}")]
@@ -72,15 +108,29 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Category not found")]
         public async Task<IActionResult> UpdateProductCategory(int id, ProductCategoryDto categoryDto)
         {
-            var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
+            try
+            {
+                var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
+                if (productCategory == null)
+                {
+                    _logger.LogWarning("Product category with ID: {Id} not found", id);
+                    return NotFound();
+                }
 
-            _mapper.Map(categoryDto, productCategory);
+                _mapper.Map(categoryDto, productCategory);
+                _db.ProductCategories.Update(productCategory);
+                await _db.SaveChangesAsync();
 
-            _db.ProductCategories.Update(productCategory);
-            await _db.SaveChangesAsync();
+                var getProductCategory = _mapper.Map<GetProductCategoryDto>(productCategory);
+                _logger.LogInformation("Updated product category with ID {Id}", id);
 
-            var getProductCategory = _mapper.Map<GetProductCategoryDto>(productCategory);
-            return Ok(getProductCategory);
+                return Ok(getProductCategory);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update product category with ID {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpDelete("categories/{id}")]
@@ -90,12 +140,27 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Category not found")]
         public async Task<IActionResult> DeleteProductCategory(int id)
         {
-            var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
+            try
+            {
+                var productCategory = await _db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id);
+                if (productCategory == null)
+                {
+                    _logger.LogWarning("Product category with ID: {Id} not found", id);
+                    return NotFound();
+                }
 
-            _db.ProductCategories.Remove(productCategory);
-            await _db.SaveChangesAsync();
+                _db.ProductCategories.Remove(productCategory);
+                await _db.SaveChangesAsync();
 
-            return Ok();
+                _logger.LogInformation("Deleted product category with ID {Id}", id);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete product category with ID {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet()]
@@ -105,12 +170,20 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Products not found")]
         public async Task<IActionResult> GetProducts()
         {
-            var products = await _db.Products
-                                    .Include(p => p.ProductCategory)
-                                    .ToListAsync();
-
-            var getProductsDto = _mapper.Map<IEnumerable<GetProductDto>>(products);
-            return Ok(getProductsDto);
+            try
+            {
+                _logger.LogInformation("Fetching all products");
+                var products = await _db.Products
+                                        .Include(p => p.ProductCategory)
+                                        .ToListAsync();
+                var getProductsDto = _mapper.Map<IEnumerable<GetProductDto>>(products);
+                return Ok(getProductsDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch products");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("{id}")]
@@ -120,12 +193,27 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Product not found")]
         public async Task<IActionResult> GetProduct(int id)
         {
-            var product = await _db.Products
-                                   .Include(p => p.ProductCategory)
-                                   .FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                _logger.LogInformation("Fetching product with ID: {Id}", id);
+                var product = await _db.Products
+                                       .Include(p => p.ProductCategory)
+                                       .FirstOrDefaultAsync(p => p.Id == id);
 
-            var getProductDto = _mapper.Map<GetProductDto>(product);
-            return Ok(getProductDto);
+                if (product == null)
+                {
+                    _logger.LogWarning("Product with ID: {Id} not found", id);
+                    return NotFound();
+                }
+
+                var getProductDto = _mapper.Map<GetProductDto>(product);
+                return Ok(getProductDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch product with ID: {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpPost()]
@@ -135,13 +223,22 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Product category not found")]
         public async Task<IActionResult> CreateProduct(ProductDto productDto)
         {
-            var product = _mapper.Map<Product>(productDto);
+            try
+            {
+                var product = _mapper.Map<Product>(productDto);
+                _db.Add(product);
+                await _db.SaveChangesAsync();
 
-            _db.Add(product);
-            await _db.SaveChangesAsync();
+                var getProductDto = _mapper.Map<GetProductDto>(product);
+                _logger.LogInformation("Created a new product with ID {ProductId}", product.Id);
 
-            var getProductDto = _mapper.Map<GetProductDto>(product);
-            return Ok(getProductDto);
+                return Ok(getProductDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create product");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpPut("{id}")]
@@ -151,15 +248,30 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Product not found")]
         public async Task<IActionResult> UpdateProduct(int id, ProductDto productDto)
         {
-            var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
 
-            _mapper.Map(productDto, product);
+                if (product == null)
+                {
+                    _logger.LogWarning("Product with ID: {Id} not found", id);
+                    return NotFound();
+                }
 
-            _db.Products.Update(product);
-            await _db.SaveChangesAsync();
+                _mapper.Map(productDto, product);
+                _db.Products.Update(product);
+                await _db.SaveChangesAsync();
 
-            var getProductDto = _mapper.Map<GetProductDto>(product);
-            return Ok(getProductDto);
+                var getProductDto = _mapper.Map<GetProductDto>(product);
+                _logger.LogInformation("Updated product with ID {Id}", id);
+
+                return Ok(getProductDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update product with ID {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpDelete("{id}")]
@@ -169,12 +281,28 @@ namespace nc.productmanager.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Product not found")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
 
-            _db.Products.Remove(product);
-            await _db.SaveChangesAsync();
+                if (product == null)
+                {
+                    _logger.LogWarning("Product with ID: {Id} not found", id);
+                    return NotFound();
+                }
 
-            return Ok();
+                _db.Products.Remove(product);
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation("Deleted product with ID {Id}", id);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete product with ID {Id}", id);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
     }
