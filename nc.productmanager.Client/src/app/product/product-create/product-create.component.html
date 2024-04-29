@@ -1,0 +1,31 @@
+<div class="mat-dialog-container">
+  <h1>Create a new product</h1>
+  <div class="mat-dialog-content">
+    <form [formGroup]="form">
+      <mat-form-field appearance="outline">
+        <mat-label>Name</mat-label>
+        <input matInput formControlName="name">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Preis</mat-label>
+        <input type="number" matInput formControlName="price">
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Beschreibung</mat-label>
+        <textarea matInput formControlName="description"></textarea>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Kategorie</mat-label>
+        <mat-select formControlName="productCategoryId">
+          <mat-option *ngFor="let category of categories" [value]="category.id">
+            {{ category.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </form>
+  </div>
+  <div class="mat-dialog-actions">
+    <button mat-stroked-button (click)="onCancel()">Cancel</button>
+    <button mat-flat-button color="primary" class="ms-2" (click)="onCreate()" [disabled]="!form.valid">Create Product</button>
+  </div>
+</div>
